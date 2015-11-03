@@ -1,29 +1,67 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 
 <head>
-  <script src="bower_components/platform/platform.js"></script>
-  <link rel="import" href="bower_components/tracking-elements/video-object-tracking.html">
+  <meta charset="utf-8">
+  <title>tracking.js - face with camera</title>
+  <link rel="stylesheet" href="assets/demo.css">
+
+  <script src="bower_components/tracking.js/build/tracking-min.js"></script>
+  <script src="bower_components/tracking.js/build/data/face-min.js"></script>
+  <script src="bower_components/dat-gui/build/dat.gui.min.js"></script>
+
+  <style>
+  video,
+  canvas {
+    margin-left: 230px;
+    margin-top: 120px;
+    position: absolute;
+  }
+  </style>
 </head>
 
-<body style="background-color:#000">
-  <img src="enterprise.png" style="position:absolute;width:240px">
-  <video is="video-object-tracking" target="face" camera="true" width="640" height="480" autoplay>
-    <video>
-      <script>
-      var div = document.querySelector('img');
-      var video = document.querySelector('video');
-      video.addEventListener('track', function(event) {
-        event.detail.data.forEach(function(rect) {
-          pickup(video, rect);
-        });
-      });
+<body>
+  <div class="demo-title">
+    <p><a href="http://trackingjs.com" target="_parent">tracking.js</a> － get user's webcam and detect faces</p>
+  </div>
 
-      function pickup(video, rect) {
-        div.style.left = video.offsetLeft + rect.x - 100 + 'px';
-        div.style.top = video.offsetTop + rect.y + 'px';
-      }
-      </script>
+  <div class="demo-frame">
+    <div class="demo-container">
+      <video id="video" width="320" height="240" preload autoplay loop muted></video>
+      <canvas id="canvas" width="320" height="240"></canvas>
+    </div>
+  </div>
+
+  <script>
+  window.onload = function() {
+    var video = document.getElementById('video');
+    var canvas = document.getElementById('canvas');
+    var context = canvas.getContext('2d');
+    var tracker = new tracking.ObjectTracker('face');
+    tracker.setInitialScale(4);
+    tracker.setStepSize(2);
+    tracker.setEdgesDensity(0.1);
+    tracking.track('#video', tracker, {
+      camera: true
+    });
+    tracker.on('track', function(event) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      event.data.forEach(function(rect) {
+        context.strokeStyle = '#a64ceb';
+        context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+        context.font = '11px Helvetica';
+        context.fillStyle = "#fff";
+        context.fillText('x: ' + rect.x + 'px', rect.x + rect.width + 5, rect.y + 11);
+        context.fillText('y: ' + rect.y + 'px', rect.x + rect.width + 5, rect.y + 22);
+      });
+    });
+    var gui = new dat.GUI();
+    gui.add(tracker, 'edgesDensity', 0.1, 0.5).step(0.01);
+    gui.add(tracker, 'initialScale', 1.0, 10.0).step(0.1);
+    gui.add(tracker, 'stepSize', 1, 5).step(0.1);
+  };
+  </script>
+
 </body>
 
 </html>

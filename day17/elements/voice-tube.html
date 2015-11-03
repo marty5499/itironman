@@ -1,0 +1,94 @@
+<link rel="import" href="../bower_components/google-youtube/google-youtube.html">
+<link rel="import" href="x-sentence.html">
+
+<polymer-element name="voice-tube" verify attributes='youtubeid id size youtubewidth youtubeheight'>
+<template>
+	<google-youtube id='youtube' height="{{youtubeheight}}" width="{{youtubewidth}}" rel="0" start="5"
+	videoid='{{youtubeid}}'></google-youtube>
+	<template repeat='{{item in sentences}}'>
+		{{item.seq}}. <img src='speak.png' idx="{{item.seq-1}}" width='{{size*2}}px' on-click='{{playSentence}}'><div style='font-size:{{size}}px'>{{item.cn}}</div>
+		<x-sentence size='{{size}}' idx="{{item.seq-1}}" sound='false'>{{item.text}}</x-sentence>	
+		<br>	
+	</template>
+</template>
+<script>
+(function(){
+	Polymer({
+		idx: 0,
+		size:32,
+		captions:'',
+	    intervalId:'',
+	    playTimeoutId:'',
+	    playCurrentTime:0,
+	    playNewStartTime:0,
+	    youtubewidth: '320px',
+	    youtubeheight: '240px',
+	    playSentence:function(e){
+	    	this.play(e.toElement.getAttribute('idx'));
+	    },
+		ready:function(){
+			var my = this;
+			my.player = this.$.youtube;
+			my.youtubeid = my.youtubeid.trim();
+			my.youtubeid = my.youtubeid.indexOf('http')==0 ? 
+				my.youtubeid.substring(my.youtubeid.indexOf('v=')+2):
+				my.youtubeid;
+				//sole.log('youtube id['+my.youtubeid+']');
+			document.addEventListener('google-youtube-ready',function(){
+				$.each(my.captions.en,function(i){
+					my.captions.en[i].cn = '';
+					if(my.captions.hasOwnProperty('zh-Hant')){
+						my.captions.en[i].cn = my.captions['zh-Hant'][i].text;
+					};
+				});
+				my.sentences = my.captions.en;
+			});
+			// get captions
+			$.ajax(
+				{dataType: 'jsonp',
+				 url: 'http://cdn.voicetube.tw/assets/captions/'+my.id+'.js'})
+			.always(function(){my.captions = captions;});
+			// register sentence speak event
+			this.addEventListener('x-sentence-sound',function(e){
+				my.play(e.detail);
+			});
+			
+		},
+		pause:function(){
+			this.player.pause();
+		},
+		play:function(idx){
+			idx = parseInt(idx);
+			var self = this;
+			var stTime = self.sentences[idx].start;
+			var edTime = parseFloat(stTime)+parseFloat(self.sentences[idx].dur);
+			var len = stTime +','+ edTime;
+			var start = len.split(',')[0].trim();
+			start = self.playNewStartTime+parseFloat(start);
+			var end = len.split(',')[1].trim();
+			self.player.seekTo(start);
+			self.player.play();
+			var duTime = (end - start) * 1000;
+			clearTimeout(self.playTimeoutId);
+			clearInterval(self.intervalId);
+			self.playCurrentTime = 0;
+			self.playTime();
+			self.playTimeoutId = setTimeout(function () {
+			self.player.pause();
+			clearInterval(self.intervalId);
+			self.playCurrentTime = 0;
+			}, duTime);
+		},
+	    playTime:function(){
+			var self = this;
+			self.intervalId = setInterval(function(){
+			self.playCurrentTime += 10; //10ms
+			},10);
+	    },
+	    video:function(){
+	    	return this.$.youtube;
+	    }		
+	});
+})();
+</script>
+</polymer-element>
